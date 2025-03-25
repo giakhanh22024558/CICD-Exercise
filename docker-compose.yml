@@ -1,54 +1,62 @@
 version: '3.8'
 
 services:
-  mysql_keycloak:
-    image: mysql:8.0
-    container_name: mysql_keycloak
-    restart: always
-    environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: keycloak_db
-      MYSQL_USER: keycloak
-      MYSQL_PASSWORD: password
-    ports:
-      - "3307:3306"  # Different port from app database
-    volumes:
-      - mysql_keycloak_data:/var/lib/mysql  # Persist Keycloak DB
-
   mysql_app:
     image: mysql:8.0
     container_name: mysql_app
-    restart: always
+    restart: unless-stopped
+    env_file:
+      - ./setup/.env  # Load environment variables
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: springdb
-      MYSQL_USER: user
-      MYSQL_PASSWORD: password
+      MYSQL_ROOT_PASSWORD: ${APP_DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${APP_DB_NAME}
+      MYSQL_USER: ${APP_DB_USER}
+      MYSQL_PASSWORD: ${APP_DB_PASSWORD}
     ports:
       - "3308:3306"
     volumes:
-      - mysql_app_data:/var/lib/mysql  # Persist App DB
-      - ./setup/springdb.sql:/docker-entrypoint-initdb.d/springdb.sql  # Initialize DB
+      - mysql_app_data:/var/lib/mysql
+      - ./setup/springdb.sql:/docker-entrypoint-initdb.d/springdb.sql
+    networks:
+      - app-network
 
-  keycloak:
-    image: quay.io/keycloak/keycloak:latest
-    container_name: keycloak
-    restart: always
-    command: start-dev --import-realm 
-    environment:
-      KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: admin
-      KC_DB: mysql
-      KC_DB_URL: jdbc:mysql://mysql_keycloak:3306/keycloak_db
-      KC_DB_USERNAME: keycloak
-      KC_DB_PASSWORD: password
-    volumes:
-      - ./setup/SpringBootRealm-realm.json:/opt/keycloak/data/import/realm.json  # Load realm config
-    ports:
-      - "8080:8080"
+  backend:
+    build: ./backend/demo
+    container_name: spring_backend
+    restart: unless-stopped
     depends_on:
-      - mysql_keycloak
+      - mysql_app
+    env_file:
+      - ./setup/.env  # Load environment variables
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql_app:3306/${APP_DB_NAME}
+      SPRING_DATASOURCE_USERNAME: ${APP_DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${APP_DB_PASSWORD}
+    ports:
+      - "9090:9090"
+    profiles:
+      - backend
+    networks:
+      - app-network
+
+  frontend:
+    build: ./frontend
+    container_name: vue_frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    env_file:
+      - ./setup/.env  # Load environment variables
+    ports:
+      - "7070:80"
+    profiles:
+      - frontend
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
 
 volumes:
-  mysql_keycloak_data:  # Stores Keycloak database
-  mysql_app_data:       # Stores App database
+  mysql_app_data:
