@@ -17,7 +17,7 @@ Sử dụng github action để:
 
 ![image](https://github.com/user-attachments/assets/02f26e6d-dcb6-4761-ba0d-5b980c86745b)
 
-5. Khi này đã có thể truy cập cổng 8080 của frontend trên browser thông qua k8s pod
+5. Khi này đã có thể truy cập cổng 8080 của frontend trên browser thông qua k8s pod (Em đã đẩy be lên pod nhưng do lược bớt một số services để kịp làm bài nên hiện tại chỉ có thể call fe)
 
 ![Screenshot 2025-03-18 141453](https://github.com/user-attachments/assets/089c4be2-4df3-4ac1-8ba1-d681a1b1e008)
 
